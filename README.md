@@ -1,2 +1,3 @@
 # dbedit
-A tiny terminal text editor using a Splay Tree / Piece Table architecture
+A tiny terminal text editor using a Splay Tree / Piece Table architecture.
+(Development in progress.. 😄).
