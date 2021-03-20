@@ -26,9 +26,9 @@ void textBufferRemove(int startIdx, int endIdx);
 
 unsigned long remove_(struct Node *x, unsigned long startIdx, unsigned long endIdx, unsigned long seen);
 
-void displayText();
+void displayText(unsigned long startIdx, unsigned long endIdx);
 
-void traverse(Node *x);
+void traverse(Node *x, unsigned long startIdx, unsigned long endIdx, unsigned long seen);
 
 void readFile(std::string &fileName);
 

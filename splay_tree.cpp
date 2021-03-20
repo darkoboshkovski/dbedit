@@ -399,7 +399,7 @@ unsigned long remove_(Node *node, unsigned long startIdx, unsigned long endIdx,
   }
 }
 
-void displayText() {
+void displayText(unsigned long startIdx, unsigned long endIdx) {
   unsigned long oldRow = E.row;
   unsigned long oldColumn = E.column;
   E.row = 1;
@@ -408,52 +408,82 @@ void displayText() {
   E.n_words.clear();
   std::vector<unsigned long> v(1024, 0);
   E.n_words = v;
-  traverse(root);
+  traverse(root, startIdx, endIdx, 0);
   logFile << "DONE WITH TRAVERSAL" << std::endl;
   E.n_rows = E.row;
   //    std::cout<<"after traverse"<<std::endl;
   editorMoveCursorToPosition(oldRow, oldColumn);
 }
 
-void traverse(Node *x) {
+void traverse(Node *x, unsigned long startIdx, unsigned long endIdx,
+                       unsigned long seen) {
   if (!x)
     return;
+
   if (x->left) {
-    traverse(x->left);
+    traverse(x->left, startIdx, endIdx, seen);
   }
-  //  logFile << "working node with text: " << x->piece->text
-  //          << " length: " << x->piece->length << " szLeft: " << x->sizeLeft
-  //          << " szRight: " << x->sizeRight << " newLines at: ";
-  //  for (int i = 0; i < x->piece->newLines.size(); i++) {
-  //    logFile << x->piece->newLines[i] << " ";
-  //  }
-  //  logFile << std::endl;
+    logFile << "working node with text: " << x->piece->text
+            << " length: " << x->piece->length << " szLeft: " << x->sizeLeft
+            << " szRight: " << x->sizeRight << " newLines at: ";
+    for (int i = 0; i < x->piece->newLines.size(); i++) {
+      logFile << x->piece->newLines[i] << " ";
+    }
+    logFile << std::endl;
 
   //  std::cout << x->piece->text;
-  write(STDOUT_FILENO, x->piece->text.c_str(), x->piece->length);
-  for (int i = 0; i < x->piece->newLines.size(); i++) {
-    E.column += x->piece->newLines[i];
-    if (i > 0) {
-      E.column -= x->piece->newLines[i - 1] + 1;
+
+  auto pieceStartIdx = seen + x->sizeLeft;
+  auto pieceEndIdx = seen + x->sizeLeft + x->piece->length - 1;
+  // only process current node if not outside [startIdx, endIdx]
+  if (startIdx <= pieceEndIdx && endIdx >= pieceStartIdx) {
+
+    std::string currentPieceText = x->piece->text;
+    // check if piece needs to be cut from the left
+    if (startIdx > pieceStartIdx) {
+      currentPieceText = currentPieceText.substr(startIdx - pieceStartIdx,
+                                                 currentPieceText.size() -
+                                                     startIdx + pieceStartIdx);
+    }
+    // check if piece needs to be cut from the right
+    if (endIdx < pieceEndIdx) {
+      currentPieceText = currentPieceText.substr(0, currentPieceText.size() - pieceEndIdx + endIdx);
+    }
+
+    logFile << "HERE IS MY PROBLEM " << currentPieceText << std::endl;
+    write(STDOUT_FILENO, currentPieceText.c_str(), currentPieceText.size());
+    auto adjustedStartIdx = std::max(int(startIdx) - int(pieceStartIdx), 0);
+    auto adjustedEndIdx = adjustedStartIdx + currentPieceText.size() - 1;
+    auto lastVisitedNewLineIndex = -1;
+
+    for (unsigned long currentNewLineIndex : x->piece->newLines) {
+      if (currentNewLineIndex < adjustedStartIdx || currentNewLineIndex > adjustedEndIdx)
+        continue;
+      auto adjustedCurrentNewLineIndex = currentNewLineIndex - adjustedStartIdx;
+      E.column += adjustedCurrentNewLineIndex;
+      if (lastVisitedNewLineIndex != -1) {
+        E.column -= lastVisitedNewLineIndex + 1;
+      }
+      E.n_words[E.row] = E.column - 1;
+      E.row++;
+      E.column = 1;
+      lastVisitedNewLineIndex = adjustedCurrentNewLineIndex;
+    }
+    E.column += currentPieceText.size();
+    if (lastVisitedNewLineIndex != -1) {
+      E.column -= lastVisitedNewLineIndex + 1;
     }
     E.n_words[E.row] = E.column - 1;
-    E.row++;
-    E.column = 1;
-  }
-  E.column += x->piece->length;
-  if (x->piece->newLines.size() > 0) {
-    E.column -= x->piece->newLines[x->piece->newLines.size() - 1] + 1;
-  }
-  E.n_words[E.row] = E.column - 1;
-  //  logFile << "AFTER PRINTING ROWS " << E.row <<std::endl;
-  //  for (int i = 1 ; i<=E.row; i++) {
-  //    logFile << " ROW " << i << " HAS " <<E.n_words[i] << std::endl;
-  //  }
+    //  logFile << "AFTER PRINTING ROWS " << E.row <<std::endl;
+    //  for (int i = 1 ; i<=E.row; i++) {
+    //    logFile << " ROW " << i << " HAS " <<E.n_words[i] << std::endl;
+    //  }
 
-  editorMoveCursorToPosition(E.row, E.column);
+    editorMoveCursorToPosition(E.row, E.column);
+  }
   // go through this node
   if (x->right) {
-    traverse(x->right);
+    traverse(x->right, startIdx, endIdx, seen + x->sizeLeft + x->piece->length);
   }
 }
 

@@ -208,13 +208,13 @@ int main(int argc, char **argv) {
     readFile(readFileName);
   }
   editorRefreshScreen();
-  displayText();
+  displayText(0, UINT32_MAX);
   logFile << "SCREEN " << E.screenrows << " " << E.screencols << std::endl;
   while (1) {
     /* gapBufferDisplay(); */
     if (editorProcessKeypress()) {
       editorRefreshScreen();
-      displayText();
+      displayText(0, UINT32_MAX);
     }
   }
 }
