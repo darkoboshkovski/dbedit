@@ -27,7 +27,6 @@ struct Piece {
     }
     newLines = newLines_;
   }
-  // NOTE no destructor for now
 };
 
 struct Node {
@@ -49,9 +48,17 @@ struct Node {
     left = nullptr;
     right = nullptr;
     piece = nullptr;
-    // Watch out
     parent = nullptr;
   }
+};
+struct BufferConfig {
+  std::string interBuffer;
+  std::vector <unsigned long> interBufferNewlines;
+  std::string leftOfInter;
+  unsigned long long timeOfLastInter;
+  unsigned long interStartIdx;
+  unsigned long interBufferStartRow;
+  unsigned long interBufferStartColumn;
 };
 
 struct editorConfig {
@@ -62,7 +69,9 @@ struct editorConfig {
   std::vector <unsigned long> n_words;
   struct termios orig_termios;
   unsigned long control_char;
+  BufferConfig bufferConfig;
 };
+
 extern Node *root;
 extern struct editorConfig E;
 extern std::ofstream logFile;

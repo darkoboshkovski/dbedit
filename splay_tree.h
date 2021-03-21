@@ -22,6 +22,8 @@ Node *subtreeMinimum(Node *x, unsigned long lengthToRemove);
 
 void textBufferInsert(std::string text, unsigned long length, unsigned long idx);
 
+void _textBufferInsert(std::string text, unsigned long length, unsigned long idx);
+
 void textBufferRemove(int startIdx, int endIdx);
 
 unsigned long remove_(struct Node *x, unsigned long startIdx, unsigned long endIdx, unsigned long seen);

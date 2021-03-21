@@ -5,8 +5,7 @@
 #include "splay_tree.h"
 #include "editor_config.h"
 #include "utils.h"
-#include <cstring>
-#include <fstream>
+#include <chrono>
 #include <iostream>
 #include <string>
 #include <unistd.h>
@@ -115,6 +114,44 @@ struct Node *subtreeMaximum(struct Node *u, unsigned long lengthToRemove) {
 
 void textBufferInsert(std::string text, unsigned long length,
                       unsigned long idx) {
+
+  // calculate time and compare
+  unsigned long long now =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          std::chrono::system_clock::now().time_since_epoch())
+          .count();
+  if (now - E.bufferConfig.timeOfLastInter <= 1000 &&
+      E.bufferConfig.interBuffer.size() < 40) {
+    auto loopStart = E.bufferConfig.interBuffer.size();
+    for (int i = loopStart; i < loopStart + length; i++) {
+      if (text[i - loopStart] == '\n')
+        E.bufferConfig.interBufferNewlines.push_back(i);
+    }
+    E.bufferConfig.interBuffer += text;
+    E.bufferConfig.timeOfLastInter = now;
+    return;
+  }
+  // we need to add it to the tree and clean up the inter buffer
+  if (E.bufferConfig.interBuffer.size() > 0) {
+    logFile << "VLEGOV TUKA FOR SOME REASON" <<std::endl;
+    _textBufferInsert(E.bufferConfig.interBuffer,
+                      E.bufferConfig.interBuffer.size(),
+                      E.bufferConfig.interStartIdx);
+  }
+
+  E.bufferConfig.interBuffer = text;
+  E.bufferConfig.interBufferNewlines.clear();
+  E.bufferConfig.interStartIdx = idx;
+  E.bufferConfig.leftOfInter = "";
+  E.bufferConfig.timeOfLastInter = now;
+  for (int i = 0; i < text.size(); i++) {
+    if (text[i] == '\n')
+      E.bufferConfig.interBufferNewlines.push_back(i);
+  }
+}
+
+void _textBufferInsert(std::string text, unsigned long length,
+                       unsigned long idx) {
 
   logFile << "STARTING INSERT OF TEXT " << text << " AT " << idx << std::endl;
   if (!root) {
@@ -400,39 +437,121 @@ unsigned long remove_(Node *node, unsigned long startIdx, unsigned long endIdx,
 }
 
 void displayText(unsigned long startIdx, unsigned long endIdx) {
+
   unsigned long oldRow = E.row;
   unsigned long oldColumn = E.column;
+
   E.row = 1;
   E.column = 1;
-  E.n_rows = 1;
-  E.n_words.clear();
-  std::vector<unsigned long> v(1024, 0);
-  E.n_words = v;
-  traverse(root, startIdx, endIdx, 0);
-  logFile << "DONE WITH TRAVERSAL" << std::endl;
+
+  //there is no inter, just traverse the whole tree
+  if (E.bufferConfig.interBuffer.size() == 0) {
+    E.n_rows = 1;
+    E.n_words.clear();
+    std::vector<unsigned long> v(1024, 0);
+    E.n_words = v;
+    traverse(root, 0, UINT32_MAX, 0);
+
+  }
+  // we need to traverse left
+  else if (E.bufferConfig.leftOfInter.size() == 0 && E.bufferConfig.interStartIdx != 0) {
+    // this will automatically fill up interLeft
+    E.n_rows = 1;
+    E.n_words.clear();
+    std::vector<unsigned long> v(1024, 0);
+    E.n_words = v;
+    traverse(root, 0, E.bufferConfig.interStartIdx - 1, 0);
+    E.bufferConfig.interBufferStartRow = E.row;
+    E.bufferConfig.interBufferStartColumn = E.column;
+
+    // process interBuffer
+    write(STDOUT_FILENO, E.bufferConfig.interBuffer.c_str(),
+          E.bufferConfig.interBuffer.size());
+    unsigned long interBufferStartIdx = 0;
+    auto interBufferEndIdx = E.bufferConfig.interBuffer.size() - 1;
+    auto lastVisitedNewLineIndex = -1;
+
+    for (unsigned long currentNewLineIndex :
+         E.bufferConfig.interBufferNewlines) {
+      if (currentNewLineIndex < interBufferStartIdx ||
+          currentNewLineIndex > interBufferEndIdx)
+        continue;
+      auto adjustedCurrentNewLineIndex =
+          currentNewLineIndex - interBufferStartIdx;
+      E.column += adjustedCurrentNewLineIndex;
+      if (lastVisitedNewLineIndex != -1) {
+        E.column -= lastVisitedNewLineIndex + 1;
+      }
+      E.n_words[E.row] = E.column - 1;
+      E.row++;
+      E.column = 1;
+      lastVisitedNewLineIndex = adjustedCurrentNewLineIndex;
+    }
+    E.column += E.bufferConfig.interBuffer.size();
+    if (lastVisitedNewLineIndex != -1) {
+      E.column -= lastVisitedNewLineIndex + 1;
+    }
+    E.n_words[E.row] = E.column - 1;
+
+    // watch out for the "seen" thing here
+    traverse(root,
+             E.bufferConfig.interStartIdx,
+             UINT32_MAX, 0);
+  } else {
+    // we can just print interLeft, process interBuffer and then traverse right
+    if (E.bufferConfig.leftOfInter.size() > 0) {
+      write(STDOUT_FILENO, E.bufferConfig.leftOfInter.c_str(),
+            E.bufferConfig.leftOfInter.size());
+    }
+    E.row = E.bufferConfig.interBufferStartRow;
+    E.column = E.bufferConfig.interBufferStartColumn;
+
+
+    // process interBuffer
+    write(STDOUT_FILENO, E.bufferConfig.interBuffer.c_str(),
+          E.bufferConfig.interBuffer.size());
+    unsigned long interBufferStartIdx = 0;
+    auto interBufferEndIdx = E.bufferConfig.interBuffer.size() - 1;
+    auto lastVisitedNewLineIndex = -1;
+
+    for (unsigned long currentNewLineIndex :
+         E.bufferConfig.interBufferNewlines) {
+      if (currentNewLineIndex < interBufferStartIdx ||
+          currentNewLineIndex > interBufferEndIdx)
+        continue;
+      auto adjustedCurrentNewLineIndex =
+          currentNewLineIndex - interBufferStartIdx;
+      E.column += adjustedCurrentNewLineIndex;
+      if (lastVisitedNewLineIndex != -1) {
+        E.column -= lastVisitedNewLineIndex + 1;
+      }
+      E.n_words[E.row] = E.column - 1;
+      E.row++;
+      E.column = 1;
+      lastVisitedNewLineIndex = adjustedCurrentNewLineIndex;
+    }
+    E.column += E.bufferConfig.interBuffer.size();
+    if (lastVisitedNewLineIndex != -1) {
+      E.column -= lastVisitedNewLineIndex + 1;
+    }
+    E.n_words[E.row] = E.column - 1;
+    // traverse right
+    traverse(root,
+             E.bufferConfig.interStartIdx + E.bufferConfig.interBuffer.size(),
+             UINT32_MAX, 0);
+  }
   E.n_rows = E.row;
-  //    std::cout<<"after traverse"<<std::endl;
   editorMoveCursorToPosition(oldRow, oldColumn);
 }
 
 void traverse(Node *x, unsigned long startIdx, unsigned long endIdx,
-                       unsigned long seen) {
+              unsigned long seen) {
   if (!x)
     return;
 
   if (x->left) {
     traverse(x->left, startIdx, endIdx, seen);
   }
-    logFile << "working node with text: " << x->piece->text
-            << " length: " << x->piece->length << " szLeft: " << x->sizeLeft
-            << " szRight: " << x->sizeRight << " newLines at: ";
-    for (int i = 0; i < x->piece->newLines.size(); i++) {
-      logFile << x->piece->newLines[i] << " ";
-    }
-    logFile << std::endl;
-
-  //  std::cout << x->piece->text;
-
   auto pieceStartIdx = seen + x->sizeLeft;
   auto pieceEndIdx = seen + x->sizeLeft + x->piece->length - 1;
   // only process current node if not outside [startIdx, endIdx]
@@ -447,17 +566,21 @@ void traverse(Node *x, unsigned long startIdx, unsigned long endIdx,
     }
     // check if piece needs to be cut from the right
     if (endIdx < pieceEndIdx) {
-      currentPieceText = currentPieceText.substr(0, currentPieceText.size() - pieceEndIdx + endIdx);
+      currentPieceText = currentPieceText.substr(0, currentPieceText.size() -
+                                                        pieceEndIdx + endIdx);
     }
 
-    logFile << "HERE IS MY PROBLEM " << currentPieceText << std::endl;
     write(STDOUT_FILENO, currentPieceText.c_str(), currentPieceText.size());
+    if (startIdx == 0 && endIdx == E.bufferConfig.interStartIdx) {
+      E.bufferConfig.leftOfInter += currentPieceText;
+    }
     auto adjustedStartIdx = std::max(int(startIdx) - int(pieceStartIdx), 0);
     auto adjustedEndIdx = adjustedStartIdx + currentPieceText.size() - 1;
     auto lastVisitedNewLineIndex = -1;
 
     for (unsigned long currentNewLineIndex : x->piece->newLines) {
-      if (currentNewLineIndex < adjustedStartIdx || currentNewLineIndex > adjustedEndIdx)
+      if (currentNewLineIndex < adjustedStartIdx ||
+          currentNewLineIndex > adjustedEndIdx)
         continue;
       auto adjustedCurrentNewLineIndex = currentNewLineIndex - adjustedStartIdx;
       E.column += adjustedCurrentNewLineIndex;
@@ -495,7 +618,7 @@ void readFile(std::string &fileName) {
     fin.read(buffer.data(), buffer.size());
     std::streamsize dataSize = fin.gcount();
     std::string s(buffer.begin(), buffer.begin() + dataSize);
-    textBufferInsert(s, dataSize, alreadyRead);
+    _textBufferInsert(s, dataSize, alreadyRead);
     alreadyRead += dataSize;
   }
 }

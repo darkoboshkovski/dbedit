@@ -17,13 +17,14 @@
 
 // TODO investigate working splaying into remove
 // TODO look into undo/redo
-// TODO holding key disrupts insert
-// TODO add tab
 void disableRawMode() {
   if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &E.orig_termios) == -1)
     die("tcsetattr");
   logFile.close();
   E.n_words.clear();
+  E.bufferConfig.interBuffer.clear();
+  E.bufferConfig.interBufferNewlines.clear();
+  E.bufferConfig.leftOfInter.clear();
 }
 void enableRawMode() {
   if (tcgetattr(STDIN_FILENO, &E.orig_termios) == -1)
@@ -153,9 +154,36 @@ bool editorProcessKeypress() {
     handleReturn();
     rerenderAfterProcess = true;
   } else if (c >= 65 && c <= 68 && E.control_char == 2) {
+    E.bufferConfig.timeOfLastInter = 0;
+    if (E.bufferConfig.interBuffer.size() > 0) {
+      _textBufferInsert(E.bufferConfig.interBuffer,
+                        E.bufferConfig.interBuffer.size(),
+                        E.bufferConfig.interStartIdx);
+      E.bufferConfig.interBuffer = "";
+      E.bufferConfig.leftOfInter = "";
+      E.bufferConfig.interBufferNewlines.clear();
+      E.bufferConfig.interBufferStartRow = 1;
+      E.bufferConfig.interBufferStartColumn = 1;
+      E.bufferConfig.interStartIdx = 0;
+    }
     arrowKeyPressHandler((int)c);
   } else if (c == 127 || c == 8) {
+    E.bufferConfig.timeOfLastInter = 0;
+    logFile << "INTER BEFORE BACKSPACE " << E.bufferConfig.interBuffer << std::endl;
+    if (E.bufferConfig.interBuffer.size() > 0) {
+      _textBufferInsert(E.bufferConfig.interBuffer,
+                        E.bufferConfig.interBuffer.size(),
+                        E.bufferConfig.interStartIdx);
+      E.bufferConfig.interBuffer = "";
+      E.bufferConfig.leftOfInter = "";
+      E.bufferConfig.interBufferNewlines.clear();
+      E.bufferConfig.interBufferStartRow = 1;
+      E.bufferConfig.interBufferStartColumn = 1;
+      E.bufferConfig.interStartIdx = 0;
+    }
+    printTree("TREE BEFORE BACKSPACE");
     handleBackspace();
+    printTree("TREE AFTER BACKSPACE");
     rerenderAfterProcess = true;
   } else if (c == '\t') {
     int position = calculatePosition(E.row, E.column);
@@ -191,7 +219,16 @@ void initEditor() {
   std::vector<unsigned long> v(1024, 0);
   E.n_words = v;
   E.control_char = 0;
-  // gapBufferInit();
+  BufferConfig bc;
+  bc.leftOfInter = "";
+  bc.interBuffer = "";
+  bc.timeOfLastInter = 0;
+  std::vector<unsigned long> bcNewLines;
+  bc.interBufferNewlines = bcNewLines;
+  bc.interStartIdx = UINT32_MAX;
+  bc.interBufferStartRow = 1;
+  bc.interBufferStartColumn = 1;
+  E.bufferConfig = bc;
 }
 
 int main(int argc, char **argv) {
@@ -200,8 +237,6 @@ int main(int argc, char **argv) {
   //  std::cout<<"d\nb\n"<<std::endl;
   //  return 0;
   initEditor();
-  logFile << "d\nb\n";
-  logFile << "SEE HERE " << (int)'\n' << std::endl;
   if (argc > 1) {
     // There is a file to open
     std::string readFileName = argv[1];
@@ -209,7 +244,6 @@ int main(int argc, char **argv) {
   }
   editorRefreshScreen();
   displayText(0, UINT32_MAX);
-  logFile << "SCREEN " << E.screenrows << " " << E.screencols << std::endl;
   while (1) {
     /* gapBufferDisplay(); */
     if (editorProcessKeypress()) {
