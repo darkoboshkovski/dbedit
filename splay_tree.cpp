@@ -493,7 +493,6 @@ void displayText(unsigned long startIdx, unsigned long endIdx) {
     }
     E.n_words[E.row] = E.column - 1;
 
-    // watch out for the "seen" thing here
     traverse(root,
              E.bufferConfig.interStartIdx,
              UINT32_MAX, 0);
