@@ -5,8 +5,10 @@
 #ifndef DBEDIT_SPLAY_TREE_H
 #define DBEDIT_SPLAY_TREE_H
 
-#include <string>
 #include "utils.h"
+#include <cairo.h>
+#include <pango/pango.h>
+#include <string>
 
 void leftRotate(Node *x);
 
@@ -31,6 +33,10 @@ unsigned long remove_(struct Node *x, unsigned long startIdx, unsigned long endI
 void displayText(unsigned long startIdx, unsigned long endIdx);
 
 void traverse(Node *x, unsigned long startIdx, unsigned long endIdx, unsigned long seen);
+
+void textBufferFlushInterBuffer();
+
+void textBufferWrite(std::string text);
 
 void readFile(std::string &fileName);
 

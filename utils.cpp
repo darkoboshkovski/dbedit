@@ -3,63 +3,63 @@
 //
 
 #include "utils.h"
-#include <cstdio>
-#include <cstdlib>
-#include <unistd.h>
+#include <gdk/gdkdrawingcontext.h>
 
 Node *root;
 struct editorConfig E;
-std::ofstream logFile;
+unsigned long TEXT_START_X = 0;
+unsigned long TEXT_START_Y = 0;
 
-// so bad
-void die(char *message) {
-  write(STDOUT_FILENO, "\x1b[2J", 4);
-  write(STDOUT_FILENO, "\x1b[H", 3);
-  perror(message);
-  logFile.close();
-  E.n_words.clear();
-  dieNode(root);
-  exit(1);
-}
+unsigned long APPROX_CHAR_WIDTH = 0;
+unsigned long APPROX_CHAR_HEIGHT = 0;
 
-void dieNode(Node *x) {
-  if (!x) {
-    return;
-  }
-  if (x->left)
-    dieNode(x->left);
-  if (x->right)
-    dieNode(x->right);
-  //    free(x->piece->text);
-  free(x->piece);
-  free(x);
-}
+
+GdkWindow *window;
+PangoContext *context;
+PangoLayout *layout;
+GdkDrawingContext *drawingContext;
+cairo_region_t *cairoRegion;
+cairo_t *cr;
+
+GdkRGBA backgroundColor;
+GdkRGBA textColor;
+GdkRGBA caretColor;
+
+int LAYOUT_WIDTH, LAYOUT_HEIGHT;
 
 void printTree(std::string message) {
-  logFile << message << std::endl;
-  if (root && root->parent) {
-    logFile << "OMG ROOT HAS A PARENT" << std::endl;
-  }
-  printNode(root);
+    g_print("%s\n", message.c_str());
+    printNode(root);
 }
 
 void printNode(Node *x) {
-  if (!x)
-    return;
-  if (x->left) {
-    logFile << "GOING LEFT" << std::endl;
-    printNode(x->left);
-  }
-  logFile << "NODE WITH TEXT: "<< x->piece->text << " szLeft: " << x->sizeLeft
-          << " szRight: "
-          << x->sizeRight
-          << " NEWLINES AT: ";
-  for (int i = 0; i < x->piece->newLines.size(); i++) {
-    logFile << x->piece->newLines[i] << " ";
-  }
-  logFile << std::endl;
-  if (x->right) {
-    logFile << "GOING RIGHT" << std::endl;
-    printNode(x->right);
-  }
+    if (!x)
+        return;
+    if (x->left) {
+        g_print("GOING LEFT\n");
+        printNode(x->left);
+    }
+    g_print("%s%s%s%d%s%d%s", "NODE WITH TEXT: ", x->piece->text.c_str(), " szLeft: ", x->sizeLeft, " szRifht: ", x->sizeRight, " NEWLINES AT: ");
+    for (int i = 0; i < x->piece->newLines.size(); i++) {
+        g_print("%d ", x->piece->newLines[i]);
+    }
+    g_print("\n");
+    if (x->right) {
+        g_print("GOING RIGHT\n");
+        printNode(x->right);
+    }
+}
+
+std::pair<unsigned long, unsigned long> getCursorPixelPosition() {
+
+    int pixelPositionX = TEXT_START_X + (E.displayColumn - 1) * APPROX_CHAR_WIDTH;
+    int pixelPositionY = TEXT_START_Y + (E.displayRow - 1) * APPROX_CHAR_HEIGHT;
+    return std::make_pair(pixelPositionX, pixelPositionY);
+}
+
+std::pair<unsigned long, unsigned long> getCaretCursorPixelPosition() {
+
+    int pixelPositionX = TEXT_START_X + (E.column - E.startColumn) * APPROX_CHAR_WIDTH;
+    int pixelPositionY = TEXT_START_Y + (E.row - E.startRow) * APPROX_CHAR_HEIGHT;
+    return std::make_pair(pixelPositionX, pixelPositionY);
 }
