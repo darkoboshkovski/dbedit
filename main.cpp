@@ -9,6 +9,7 @@
 
 
 //TODO fix key combination processing
+//TODO explore a bit to find bugs
 guint timeoutRef;
 
 PangoFontDescription *font;
@@ -122,7 +123,6 @@ static void handleReturn(GtkWidget *widget, GdkEventKey *event, gpointer data) {
     if (E.row > E.endRow) {
         E.startRow++;
         E.endRow++;
-        g_print("START END COLUMN %d %d\n", E.startColumn, E.endColumn);
     }
 }
 
@@ -139,13 +139,19 @@ static void handleTab(GtkWidget *widget, GdkEventKey *event, gpointer data) {
 }
 
 static void handleTextCharacter(GtkWidget *widget, GdkEventKey *event, gpointer data) {
+
+    auto x = gdk_keyval_to_unicode(event -> keyval);
+    if (!x) {
+        return;
+     }
+
+
     int position = calculatePosition(E.row, E.column);
     textBufferInsert(std::string(1, (char) event->keyval), 1, position);
     E.column++;
     if (E.column > E.endColumn) {
         E.startColumn++;
         E.endColumn++;
-        g_print("START END COLUMN %d %d\n", E.startColumn, E.endColumn);
     }
 }
 
@@ -237,7 +243,6 @@ onSizeAllocate(GtkWidget *widget, GtkAllocation *allocation) {
     gtk_window_get_size(GTK_WINDOW(widget), &LAYOUT_WIDTH, &LAYOUT_HEIGHT);
     E.endRow = E.startRow + (LAYOUT_HEIGHT / APPROX_CHAR_HEIGHT) - 1;
     E.endColumn = E.startColumn + (LAYOUT_WIDTH / APPROX_CHAR_WIDTH) - 1;
-    g_print("NEW SIZE %d %d\n", LAYOUT_WIDTH, LAYOUT_HEIGHT);
 }
 
 static void
@@ -287,7 +292,6 @@ activate(GtkApplication *app,
     //font
     font = pango_font_description_from_string("Courier 13");
 
-    g_print("%f %f %f ----", backgroundColor.red, backgroundColor.green, backgroundColor.blue);
 
     //drawing area
     drawingArea = (GtkDrawingArea *) gtk_drawing_area_new();
@@ -330,7 +334,6 @@ activate(GtkApplication *app,
     GtkAllocation allocation;
     gtk_widget_get_allocation((GtkWidget *) window, &allocation);
 
-    g_print("WIDTH %d HEIGHT %d -- \n", allocation.width, allocation.height);
 }
 
 
@@ -339,11 +342,9 @@ static void openFile(GtkApplication *app, GApplicationCommandLine *cmdLine) {
     int argc;
     gchar **args = g_application_command_line_get_arguments(cmdLine, &argc);
 
-    g_print("%d", argc);
 
     if (argc > 1) {
         char *fileNameC = args[1];
-        g_print("INSIDE OPEN %s\n", fileNameC);
 
         std::string fileName(fileNameC);
         readFile(fileName);

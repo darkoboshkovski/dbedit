@@ -423,7 +423,6 @@ void textBufferWrite(std::string text, std::vector<unsigned long> &newLines) {
     auto currentRow = E.row;
     auto currentColumn = E.column;
 
-    g_print("START WRITE %s WITH S-E %d %d AT %d %d\n", text.c_str(), E.startColumn, E.endColumn, E.row, E.column);
 
     unsigned long long writeStartTime =
             std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -435,7 +434,6 @@ void textBufferWrite(std::string text, std::vector<unsigned long> &newLines) {
     std::vector<unsigned long> updatedNewLines;
     if (currentRow <= E.endRow) {
         for (auto newLine : newLines) {
-            g_print("NEWLINE %d\n", newLine);
             if (currentRow < E.startRow) {
                 lastVisitedNewLineIndex = newLine;
                 currentRow++;
@@ -474,9 +472,7 @@ void textBufferWrite(std::string text, std::vector<unsigned long> &newLines) {
             updatedNewLines.push_back(textToDisplay.size() - 1);
             lastVisitedNewLineIndex = newLine;
 
-            g_print("DURING LOOP TEXT %s", textToDisplay.c_str());
         }
-        g_print("LAST LINE\n");
         if (currentRow >= E.startRow && currentRow <= E.endRow) {
             auto textEnd = text.size() - 1;
             auto currentSliceStart = lastVisitedNewLineIndex + 1;
@@ -505,9 +501,7 @@ void textBufferWrite(std::string text, std::vector<unsigned long> &newLines) {
                     std::chrono::system_clock::now().time_since_epoch())
                     .count();
 
-    g_print("TIME %llu\n", writeEndTime - writeStartTime);
 
-    g_print("AFTER LAST LINE %s\n", textToDisplay.c_str());
     std::pair<unsigned long, unsigned long> cursorPixelPosition = getCursorPixelPosition();
     //    unsigned long oldRow, oldColumn;
     //    oldRow = E.displayRow;
@@ -543,7 +537,6 @@ void textBufferWrite(std::string text, std::vector<unsigned long> &newLines) {
         unsigned long secondPartStart = updatedNewLines.size() == 0 ? 0 : (updatedNewLines[0] + 1);
         unsigned long secondPartLength = updatedNewLines.size() == 0 ? text.size() : (textToDisplay.size() - updatedNewLines[0] - 1);
         std::string secondPart = textToDisplay.substr(secondPartStart, secondPartLength);
-        g_print("SECOND PART %s AT %d %d\n", secondPart.c_str(), cursorPixelPosition.first, cursorPixelPosition.second);
         pango_layout_set_text(layout, secondPart.c_str(), -1);
         pango_cairo_show_layout(cr, layout);
 
@@ -552,7 +545,6 @@ void textBufferWrite(std::string text, std::vector<unsigned long> &newLines) {
     }
     E.displayRow = newDisplayRow;
     E.displayColumn = newDisplayColumn;
-    g_print("END WRITE %s WITH S-E %d %d\n", text.c_str(), E.startColumn, E.endColumn);
 }
 
 void displayText(unsigned long startIdx, unsigned long endIdx) {
@@ -586,9 +578,7 @@ void displayText(unsigned long startIdx, unsigned long endIdx) {
         E.bufferConfig.interBufferStartColumn = E.column;
 
         //process inter buffer
-        g_print("BEFORE WRITE INTER %s at %d %d\n", E.bufferConfig.interBuffer.text.c_str(), E.row, E.column);
         textBufferWrite(E.bufferConfig.interBuffer.text, E.bufferConfig.interBuffer.newLines);
-        g_print("AFTER WRITE INTER\n");
         unsigned long interBufferStartIdx = 0;
         auto interBufferEndIdx = E.bufferConfig.interBuffer.text.size() - 1;
         auto lastVisitedNewLineIndex = -1;
@@ -762,7 +752,6 @@ void textBufferFlushInterBuffer() {
 void readFile(std::string &fileName) {
     GFile *file = g_file_new_for_commandline_arg(fileName.c_str());
     GFileInputStream *fin = g_file_read(file, NULL, NULL);
-    g_print("HERE\n");
 
     char buffer[1024];
     unsigned long alreadyRead = 0;
