@@ -141,7 +141,7 @@ static void handleTab(GtkWidget *widget, GdkEventKey *event, gpointer data) {
 static void handleTextCharacter(GtkWidget *widget, GdkEventKey *event, gpointer data) {
 
     auto x = gdk_keyval_to_unicode(event -> keyval);
-    if (!x) {
+    if (!x || iscntrl(x))  {
         return;
      }
 
