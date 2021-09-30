@@ -13,11 +13,18 @@
 Make sure cmake is included in your PATH.
 
 ### Step 2: Build the project
-Inside the project directory, run the following command:
+Inside the project directory, run the following commands:
 
-```cmake --build ./build --target dbedit -j 8 --```
+If this is the first time building the project and a ```build``` folder doesn't exist, run the following command:
+```
+cmake --configure . -B ./build
+```
 
-This will create a ```build``` folder inside the current one, which will contain the ```dbedit``` executable.
+Once a ```build``` directory exists, you can go ahead and build by running the following command:
+```
+cmake --build ./build --target dbedit -j 8 --
+```
+The ```build``` folder will contain the ```dbedit``` executable.
 
 ### Step 3: Run the executable
 Run the executable with or without an input file. e.g.
