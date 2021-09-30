@@ -12,17 +12,20 @@
 #include <vector>
 
 typedef unsigned long ul;
-struct Piece {
+struct Piece
+{
     ul length;
     std::string text;
     std::vector<ul> newLines;
 
-    Piece(ul length_, std::string text_) {
+    Piece(ul length_, std::string text_)
+    {
         length = length_;
         text = text_;
 
         std::vector<ul> newLines_;
-        for (int i = 0; i < length; i++) {
+        for (int i = 0; i < length; i++)
+        {
             if (text[i] == '\n')
                 newLines_.push_back(i);
         }
@@ -30,11 +33,13 @@ struct Piece {
     }
 };
 
-struct Node {
+struct Node
+{
     Piece *piece;
     Node *left, *right, *parent;
     ul sizeLeft, sizeRight;
-    Node(Piece *p, Node *l, Node *r, Node *parent_, ul szLeft, ul szRight) {
+    Node(Piece *p, Node *l, Node *r, Node *parent_, ul szLeft, ul szRight)
+    {
         piece = p;
         left = l;
         right = r;
@@ -42,7 +47,8 @@ struct Node {
         sizeLeft = szLeft;
         sizeRight = szRight;
     }
-    ~Node() {
+    ~Node()
+    {
         if (piece)
             delete piece;
 
@@ -52,7 +58,8 @@ struct Node {
         parent = nullptr;
     }
 };
-struct BufferConfig {
+struct BufferConfig
+{
     unsigned long long timeOfLastInter;
     unsigned long interStartIdx;
     unsigned long interBufferStartRow;
@@ -60,7 +67,8 @@ struct BufferConfig {
     Piece interBuffer = Piece(0, "");
     Piece leftOfInter = Piece(0, "");
 
-    BufferConfig() {
+    BufferConfig()
+    {
         timeOfLastInter = UINT32_MAX;
         interStartIdx = 0;
         interBufferStartRow = 1;
@@ -68,7 +76,8 @@ struct BufferConfig {
     };
 };
 
-struct editorConfig {
+struct editorConfig
+{
     unsigned long startRow, endRow;
     unsigned long startColumn, endColumn;
     unsigned long row, column;
@@ -86,13 +95,11 @@ extern unsigned long TEXT_START_Y;
 extern unsigned long APPROX_CHAR_WIDTH;
 extern unsigned long APPROX_CHAR_HEIGHT;
 
-
 extern GdkRGBA backgroundColor;
 extern GdkRGBA textColor;
 extern GdkRGBA caretColor;
 
 extern int LAYOUT_WIDTH, LAYOUT_HEIGHT;
-
 
 extern GdkWindow *window;
 extern PangoContext *context;
@@ -105,5 +112,6 @@ void printTree(std::string message);
 void printNode(Node *x);
 std::pair<unsigned long, unsigned long> getCursorPixelPosition();
 std::pair<unsigned long, unsigned long> getCaretCursorPixelPosition();
+std::pair<unsigned long, unsigned long> getRowColumnDataForCoords(unsigned long xRaw, unsigned long yRaw);
 
-#endif// DBEDIT_UTILS_H
+#endif // DBEDIT_UTILS_H
